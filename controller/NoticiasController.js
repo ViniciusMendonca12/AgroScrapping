@@ -1,10 +1,110 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
-const FormData = require('form-data');
-
 var Noticias = require("../models/NoticiasModel")
 var ControleImagens = require("../models/ControleImagensModel")
 
+
+async function pegarDetalhesNoticiasCanalRural(noticia) {
+    try {
+        const { data } = await axios.get(noticia.link);
+        const $ = cheerio.load(data);
+
+        var conteudoTexto = ""
+
+        $('p').each((index, element) => {
+            const paragrafo = $(element).text().trim();
+
+            if (!paragrafo.toLowerCase().includes("Confira na palma da mão informações quentes sobre agricultura, pecuária, economia e previsão do tempo: siga o Canal Rural no WhatsApp!") &&
+                !paragrafo.toLowerCase().includes('<img width="21" height="21"') &&
+                !paragrafo.toLowerCase().includes("Cadastro efetuado com sucesso.") &&
+                !paragrafo.toLowerCase().includes("Newsletter") &&
+                !paragrafo.toLowerCase().includes("Ocorreu um erro") &&
+                paragrafo.length > 0) {
+                conteudoTexto += paragrafo + '\n\n';
+            }
+
+        });
+        
+
+        const fonte = "Canal Rural"
+        const dataPublicacao = $('time.text-gray-500.content-infopost span').text().trim()
+
+        noticia.conteudoTexto = conteudoTexto 
+        noticia.fonte = fonte || 'Fonte não encontrada';
+        noticia.dataPublicacao = dataPublicacao || 'Data de publicação não encontrada';
+
+/*         console.log(noticia)
+ */    } catch (error) {
+        console.error(`Erro ao capturar detalhes da notícia: ${noticia.link}`, error);
+    }
+}
+
+
+const urlCanalRural = "https://www.canalrural.com.br/ultimas-noticias/"
+async function pegarNoticiasCanalRural() {
+    try {
+        const { data } = await axios.get(urlCanalRural);
+        const $ = cheerio.load(data);
+
+        let noticiasCanalRural = [];
+
+        $('.feed').each((index, element) => {
+            if (index >= 10) return false; // Limita a 10 notícias
+        
+            const titulo = $(element).find('.feed-title').text().trim();
+            const link = $(element).find('a').attr('href');
+        
+            noticiasCanalRural.push({
+                titulo,
+                link
+            });
+        });
+        
+
+        for (let noticiaCanalRural of noticiasCanalRural) {
+            await pegarDetalhesNoticiasCanalRural(noticiaCanalRural);
+        } 
+        // console.log(noticiasCanalRural)
+        return noticiasCanalRural
+    } catch (error) {
+        console.error('Erro ao capturar as notícias do Canal rural:', error);
+    }
+}
+
+
+async function pegarDetalhesNoticiasCanalRural(noticia) {
+    try {
+        const { data } = await axios.get(noticia.link);
+        const $ = cheerio.load(data);
+
+        var conteudoTexto = ""
+
+        $('p').each((index, element) => {
+            const paragrafo = $(element).text().trim();
+
+            if (!paragrafo.toLowerCase().includes("Confira na palma da mão informações quentes sobre agricultura, pecuária, economia e previsão do tempo: siga o Canal Rural no WhatsApp!") &&
+                !paragrafo.toLowerCase().includes('<img width="21" height="21"') &&
+                !paragrafo.toLowerCase().includes("Cadastro efetuado com sucesso.") &&
+                !paragrafo.toLowerCase().includes("Newsletter") &&
+                !paragrafo.toLowerCase().includes("Ocorreu um erro") &&
+                paragrafo.length > 0) {
+                conteudoTexto += paragrafo + '\n\n';
+            }
+
+        });
+        
+
+        const fonte = "Canal Rural"
+        const dataPublicacao = $('time.text-gray-500.content-infopost span').text().trim()
+
+        noticia.conteudoTexto = conteudoTexto 
+        noticia.fonte = fonte || 'Fonte não encontrada';
+        noticia.dataPublicacao = dataPublicacao || 'Data de publicação não encontrada';
+        
+    } catch (error) {
+        console.error(`Erro ao capturar detalhes da notícia: ${noticia.link}`, error);
+    }
+}
 
 const url = 'https://www.noticiasagricolas.com.br/noticias/';
 
@@ -57,9 +157,8 @@ async function pegarDetalhesNoticias(noticia) {
 
         const fonte = removerFontePrefixo($('.fonte').text().trim())
         const dataPublicacao = removerDataPrefixo($('.datas').text().trim())
-        const conteudoTextoResumido = await summarizeText(conteudoTexto, 10);
 
-        noticia.conteudoTexto = conteudoTextoResumido;
+        noticia.conteudoTexto = conteudoTexto 
         noticia.fonte = fonte || 'Fonte não encontrada';
         noticia.dataPublicacao = dataPublicacao || 'Data de publicação não encontrada';
 
@@ -67,28 +166,7 @@ async function pegarDetalhesNoticias(noticia) {
         console.error(`Erro ao capturar detalhes da notícia: ${noticia.link}`, error);
     }
 }
-async function summarizeText(text, sentences) {
-    const formdata = new FormData();
-    formdata.append("key", "d6c55268715ac45a3ef08a508e43cd74");  
-    formdata.append("txt", text);  
-    formdata.append("sentences", sentences);  
 
-    try {
-        const response = await axios.post("https://api.meaningcloud.com/summarization-1.0", formdata, {
-            headers: formdata.getHeaders()
-        });
-
-        if (response.status === 200) {
-            return response.data.summary;  
-        } else {
-            console.log("Erro:", response.status);
-            return null;
-        }
-    } catch (error) {
-        console.error('Erro:', error);
-        return null;
-    }
-}
 
 function removerFontePrefixo(fonte) {
     const prefixo = "Fonte:";
@@ -137,11 +215,13 @@ async function vinculaImagemNoticia(noticiasNovas) {
 
 async function salvaNoticias(req, res) {
     try {
+        let noticiasNovasCanalRural = await pegarNoticiasCanalRural()
+        let noticiasNovas = await pegarNoticias()
+        noticiasNovas = noticiasNovas.concat(noticiasNovasCanalRural);
 
-        const noticiasNovas = await pegarNoticias()
-        const pegaNoticiasBanco = await Noticias.pegaNoticiasBanco()
-        const titulosBanco = new Set(pegaNoticiasBanco.map(noticia => noticia.titulo));
-        const noticiasParaComparar = []
+        let pegaNoticiasBanco = await Noticias.pegaNoticiasBanco()
+        let titulosBanco = new Set(pegaNoticiasBanco.map(noticia => noticia.titulo));
+        let noticiasParaComparar = []
 
         noticiasNovas.forEach(function (noticia, index) {
             if (!titulosBanco.has(noticia.titulo)) {
@@ -164,9 +244,6 @@ async function salvaNoticias(req, res) {
         console.log(error)
     }
 }
-
-
-
 
 module.exports = {
     salvaNoticias

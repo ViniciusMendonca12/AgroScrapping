@@ -4,7 +4,6 @@ var router = require("./routes/routes")
 const bodyParser = require("body-parser")
 const port = 3000;
 
-
 app.set("view engine", "ejs")
 app.use(bodyParser.urlencoded({extended: false}))
 app.use(bodyParser.json())
@@ -31,8 +30,8 @@ const dom = new JSDOM(`
 
 const $ = jQuery(dom.window);
 
-app.get('/noticias', (req, res) => {
-  
+app.get('/', (req, res) => {
+  res.redirect('/noticias/pagina/1');
 });
 
 app.listen(port, () => {

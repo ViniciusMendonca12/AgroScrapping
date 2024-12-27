@@ -87,7 +87,7 @@
                                             <%= ultimaNoticia.titulo %>
                                         </h5>
                                         <p class="card-text">
-                                            <%= ultimaNoticia.conteudoTexto.length> 200 ?
+                                            <%=  ultimaNoticia.conteudoTexto != null && ultimaNoticia.conteudoTexto.length > 200 ?
                                                 ultimaNoticia.conteudoTexto.substring(0, 200) + '...' :
                                                 ultimaNoticia.conteudoTexto %>
                                         </p>
@@ -195,8 +195,7 @@
             <div class="row">
                 <div class="col-md-4">
                     <h5>Sobre Nós</h5>
-                    <p>Este site foi desenvolvido para o trabalho de graduação no curso de BigData no Agronegócio
-                        11ºTurma.</p>
+                    <p>Site desenvolvido para fins educativos de estudo.</p>
                 </div>
                 <div class="col-md-4">
                     <h5>Links Rápidos</h5>

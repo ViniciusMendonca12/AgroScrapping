@@ -10,7 +10,6 @@ class PaginasController{
         var noticias = await Noticias.exibirNoticiasPaginas(pagina)
         var ultimasNoticias = await Noticias.ultimasNoticias()
         var datasPublicacao = await Noticias.pegarTodasDatasDePublicacao()
-        console.log(datasPublicacao)
         res.render('noticias.ejs' , {noticias:noticias, ultimasNoticias: ultimasNoticias, datasPublicacao:datasPublicacao});
 
     } catch (error) {
@@ -32,7 +31,7 @@ class PaginasController{
 
     async atualizarNoticiasCodigo(req,res){
         var codigoSecreto = req.body.codigoSecreto
-        if(codigoSecreto == "gemeos12"){
+        if(codigoSecreto == "atualizar"){
            var atualizar = await NoticiasController.salvaNoticias()
            if(atualizar.status){
             res.redirect("/noticias/pagina/1/?sucesso=1")
